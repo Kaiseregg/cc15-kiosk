@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>CombatCart 15 – Kiosk</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <img src="assets/logo.png" alt="CombatCart 15"/>
+        <div class="title">
+          <div class="h1">COMBATCART 15</div>
+          <div class="h2">Tactical Mobile Supply</div>
+        </div>
+      </div>
+
+      <div class="pill lang" aria-label="Language">
+        <button data-lang="de" class="active">DE</button>
+        <button data-lang="fr">FR</button>
+      </div>
+    </div>
+
+    <div class="automatonWrap">
+      <div class="machineStage" id="machine">
+        <img src="assets/automaton.png" alt="CombatCart automaton"/>
+
+        <!-- 15 precise slot overlays (matched to white panels) -->
+        <div class="slot" data-slot="1" style="left:11.191%; top:6.836%; width:17.870%; height:6.836%"></div>
+        <div class="slot" data-slot="2" style="left:33.574%; top:6.885%; width:18.412%; height:6.787%"></div>
+        <div class="slot" data-slot="3" style="left:56.498%; top:6.934%; width:18.141%; height:6.738%"></div>
+        <div class="slot" data-slot="4" style="left:11.282%; top:18.555%; width:17.960%; height:6.348%"></div>
+        <div class="slot" data-slot="5" style="left:33.484%; top:18.506%; width:18.502%; height:6.445%"></div>
+        <div class="slot" data-slot="6" style="left:56.498%; top:18.506%; width:18.141%; height:6.445%"></div>
+        <div class="slot" data-slot="7" style="left:10.921%; top:29.492%; width:18.051%; height:6.348%"></div>
+        <div class="slot" data-slot="8" style="left:33.574%; top:29.443%; width:18.412%; height:6.348%"></div>
+        <div class="slot" data-slot="9" style="left:56.498%; top:29.541%; width:18.141%; height:6.250%"></div>
+        <div class="slot" data-slot="10" style="left:11.011%; top:40.527%; width:17.960%; height:6.299%"></div>
+        <div class="slot" data-slot="11" style="left:33.574%; top:40.430%; width:18.412%; height:6.396%"></div>
+        <div class="slot" data-slot="12" style="left:56.498%; top:40.381%; width:18.231%; height:6.396%"></div>
+        <div class="slot" data-slot="13" style="left:10.830%; top:51.416%; width:18.051%; height:6.104%"></div>
+        <div class="slot" data-slot="14" style="left:33.574%; top:51.318%; width:18.412%; height:6.201%"></div>
+        <div class="slot" data-slot="15" style="left:56.498%; top:51.465%; width:18.231%; height:6.055%"></div>
+
+        <!-- Cart button is the REAL basket at the bottom of the machine -->
+        <button class="basketBtn" data-cart-btn aria-label="Cart"><span class="basketBadge" data-cart-badge>0</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen hint (mobile requires user interaction) -->
+  <div class="fsHint" id="fsHint">
+    <div class="fsCard">
+      <div class="big">Kiosk-Modus</div>
+      <div class="small">Tippe auf <b>Start</b>, um in den Vollbildmodus zu wechseln (empfohlen auf Smartphone).</div>
+      <button class="btn" id="fsGo">Start</button>
+    </div>
+  </div>
+
+  <!-- Product modal -->
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modalCard">
+      <div class="modalTop">
+        <div class="name" id="mName">—</div>
+        <button class="closeX" id="mClose" aria-label="Close">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="modalImg"><img id="mImg" alt=""/></div>
+        <div class="modalSide">
+          <div class="price" id="mPrice">—</div>
+          <div class="muted" id="mInfo"></div>
+
+          <div class="row" style="align-items:center; justify-content:space-between;">
+            <div class="step">
+              <button id="mMinus" aria-label="minus">–</button>
+              <span id="mQty">1</span>
+              <button id="mPlus" aria-label="plus">+</button>
+            </div>
+            <span class="muted" style="font-weight:900;">Qty</span>
+          </div>
+
+          <button class="primary" id="mAdd" data-i18n="addToCart">In den Warenkorb</button>
+          <div class="row">
+            <button class="secondary" id="mGoCart" data-i18n="cart">Warenkorb</button>
+            <button class="secondary" id="mBack" data-i18n="close">Schliessen</button>
+          </div>
+
+          <div class="muted" style="margin-top:6px;">(Offline UI Test)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><span class="ok">✓</span><span id="toastText">OK</span></div>
+
+<!-- Supabase client (ANON key ist öffentlich ok) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+// Slots/Produkte live aus Supabase View laden: public.cc15_slots_view
+let SLOTS_VIEW = []; // [{slot_no, slot_active, product_id, name_de, name_fr, price_chf, image_url}]
+
+async function loadSlotsView(){
+  try{
+    const sb = CC15.getSupabase();
+    const { data, error } = await sb
+      .from('cc15_slots_view')
+      .select('*')
+      .order('slot_no', { ascending: true });
+    if(error) throw error;
+    SLOTS_VIEW = Array.isArray(data) ? data : [];
+  }catch(e){
+    console.warn('Supabase load failed, fallback to EMPTY', e);
+    SLOTS_VIEW = [];
+  }
+}
+
+function slotByNo(n){
+  return SLOTS_VIEW.find(s => String(s.slot_no) === String(n));
+}
+
+function renderSlots(){
+  document.querySelectorAll('.slot').forEach(el=>{
+    const n = String(el.dataset.slot);
+    const s = slotByNo(n);
+    const has = s && s.product_id && s.slot_active !== false;
+    el.innerHTML='';
+    el.classList.toggle('empty', !has);
+    if(has){
+      const img=document.createElement('img');
+      img.src = s.image_url || 'assets/empty.svg';
+      img.alt = (CC15.getLang()==='fr' ? (s.name_fr||'') : (s.name_de||''));
+      el.appendChild(img);
+    }
+  });
+}
+
+let current=null;
+let qty=1;
+
+function openModal(slot){
+  const p = {
+    id: slot.product_id,
+    name_de: slot.name_de,
+    name_fr: slot.name_fr,
+    price: Number(slot.price_chf || 0),
+    img: slot.image_url || 'assets/empty.svg'
+  };
+  current=p; qty=1;
+  document.getElementById('mQty').textContent='1';
+  document.getElementById('mName').textContent=(CC15.getLang()==='fr'?p.name_fr:p.name_de);
+  document.getElementById('mPrice').textContent=CC15.money(p.price)+' CHF';
+  document.getElementById('mInfo').textContent=(CC15.getLang()==='fr'
+    ? 'Choisissez la quantité, puis ajoutez au panier.'
+    : 'Menge wählen und in den Warenkorb legen.');
+  document.getElementById('mImg').src=p.img;
+  const modal=document.getElementById('modal');
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+}
+function closeModal(){
+  const modal=document.getElementById('modal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+}
+function addToCart(p,q){
+  const cart=CC15.getCart();
+  const ex=cart.find(x=>x.id===p.id);
+  if(ex) ex.qty += q;
+  else cart.push({ id:p.id, name_de:p.name_de, name_fr:p.name_fr, price:p.price, img:p.img, qty:q });
+  CC15.setCart(cart);
+  CC15.syncHeader();
+  // visual confirmation
+  const b=document.querySelector('[data-cart-badge]');
+  if(b){
+    b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+  }
+  showToast(CC15.getLang()==='fr' ? 'Ajouté au panier' : 'Im Warenkorb');
+}
+
+function showToast(msg){
+  const el=document.getElementById('toast');
+  const t=document.getElementById('toastText');
+  if(!el||!t) return;
+  t.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t=setTimeout(()=>el.classList.remove('show'), 900);
+}
+
+function maybeFullscreenUI(){
+  const hint=document.getElementById('fsHint');
+  const btn=document.getElementById('fsGo');
+  const isMobile = matchMedia('(max-width: 820px)').matches;
+  const wasShown = sessionStorage.getItem('cc15_fs_hint')==='1';
+  if(isMobile && !wasShown && !document.fullscreenElement){
+    hint.classList.add('show');
+    btn.onclick = async ()=>{
+      try{ await document.documentElement.requestFullscreen(); }catch(e){}
+      sessionStorage.setItem('cc15_fs_hint','1');
+      hint.classList.remove('show');
+    };
+  }
+}
+
+// Keep machine + slot layer as ONE unit (no scroll/resize mismatch)
+function fitMachine(){
+  const stage = document.getElementById('machine');
+  const topbar = document.querySelector('.topbar');
+  if(!stage || !topbar) return;
+
+  const aspect = 2048 / 1108; // height / width
+  const isDesktop = matchMedia('(min-width: 900px)').matches;
+
+  // width target (bigger on desktop)
+  const maxW = isDesktop ? Math.min(window.innerWidth * 0.92, 1200) : Math.min(window.innerWidth * 0.96, 980);
+
+  // height from width (keeps 1 unit scaling)
+  let h = maxW * aspect;
+
+  if(!isDesktop){
+    // On mobile: ensure the whole machine fits in viewport (no scroll)
+    const pad = 22;
+    const availH = window.innerHeight - topbar.getBoundingClientRect().height - pad;
+    h = Math.min(h, availH, 1480);
+  }else{
+    // On desktop: allow a bigger machine even if page needs scroll
+    h = Math.min(h, 1750);
+  }
+
+  stage.style.setProperty('--machine-h', Math.max(520, Math.floor(h)) + 'px');
+}
+
+async function wire(){
+  CC15.initCommon();
+  await loadSlotsView();
+
+  fitMachine();
+  window.addEventListener('resize', fitMachine);
+
+  // Click slots
+  document.querySelectorAll('.slot').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const s = slotByNo(el.dataset.slot);
+      if(!s || !s.product_id || s.slot_active === false) return;
+      openModal(s);
+    });
+  });
+
+  // Modal
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mBack').addEventListener('click', closeModal);
+  document.getElementById('modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') closeModal(); });
+
+  document.getElementById('mMinus').addEventListener('click', ()=>{ qty=Math.max(1,qty-1); document.getElementById('mQty').textContent=String(qty); });
+  document.getElementById('mPlus').addEventListener('click', ()=>{ qty=qty+1; document.getElementById('mQty').textContent=String(qty); });
+
+  document.getElementById('mAdd').addEventListener('click', ()=>{ if(current) addToCart(current, qty); });
+  document.getElementById('mGoCart').addEventListener('click', ()=>{ if(current) addToCart(current, qty); CC15.goto('cart.html'); });
+
+  window.renderPage = ()=>{ renderSlots(); CC15.syncHeader(); };
+  renderSlots();
+  CC15.syncHeader();
+  maybeFullscreenUI();
+
+  // hard-disable page scrolling on kiosk screen (mobile only)
+  const isMobile = matchMedia('(max-width: 820px)').matches;
+  if(isMobile) document.addEventListener('touchmove', (e)=>{
+    // allow interactions in modal
+    if(document.getElementById('modal').classList.contains('open')) return;
+    e.preventDefault();
+  }, { passive:false });
+}
+wire();
+</script>
+</body>
+</html>

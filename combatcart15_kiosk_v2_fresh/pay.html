@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>CombatCart 15 – Zahlung</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand" style="cursor:pointer" onclick="CC15.goto('index.html')">
+        <img src="assets/logo.png" alt="CombatCart 15"/>
+        <div class="title">
+          <div class="h1">COMBATCART 15</div>
+          <div class="h2">Tactical Mobile Supply</div>
+        </div>
+      </div>
+      <div class="pill lang">
+        <button data-lang="de" class="active">DE</button>
+        <button data-lang="fr">FR</button>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="card">
+        <h1 data-i18n="payment">Zahlung</h1>
+
+        <div class="muted" data-i18n="notePay">Bitte TWINT senden. Danach hier bestätigen.</div>
+
+        <div class="field" style="margin-top:12px;">
+          <label data-i18n="twintTitle">TWINT Zahlung</label>
+          <div class="codebox" id="twintNo">—</div>
+        </div>
+
+        <div class="row">
+          <button class="btn" id="btnCopy" data-i18n="copy">Kopieren</button>
+          <button class="btn" id="btnBack">← <span data-i18n="checkout">Kasse</span></button>
+          <button class="btn primary" id="btnPaid" data-i18n="paid">Ich habe bezahlt</button>
+        </div>
+
+        <div class="muted" style="margin-top:10px;"><span data-i18n="total">Total</span>: <span id="total">0.00</span> CHF</div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+function formatPhone(p){
+  if(!p) return '—';
+  // keep it simple: +4179... -> +41 79 ...
+  const s=String(p).replace(/\s+/g,'');
+  if(!s.startsWith('+41') || s.length<12) return p;
+  return `+41 ${s.slice(3,5)} ${s.slice(5,8)} ${s.slice(8,10)} ${s.slice(10,12)}`;
+}
+
+function getOrder(){
+  try{ return JSON.parse(localStorage.getItem(CC15.STORAGE_KEYS.order)||'null'); }catch{return null}
+}
+
+function render(){
+  CC15.initCommon();
+  const order = getOrder();
+  if(!order){ CC15.goto('checkout.html'); return; }
+
+  const tw = (window.CC15_CONFIG && window.CC15_CONFIG.twint) ? window.CC15_CONFIG.twint : {};
+  const raw = (order.location==='corb') ? tw.corbieres : (order.location==='azh' ? tw.azh_romont : null);
+  document.getElementById('twintNo').textContent = formatPhone(raw);
+  document.getElementById('total').textContent = CC15.money(order.total);
+  CC15.syncHeader();
+
+  document.getElementById('btnCopy').onclick = async ()=>{
+    const txt = document.getElementById('twintNo').textContent;
+    try{ await navigator.clipboard.writeText(txt); }catch(e){}
+    const btn=document.getElementById('btnCopy');
+    btn.textContent = (CC15.getLang()==='fr' ? 'Copié' : 'Kopiert');
+    setTimeout(()=>btn.textContent=(CC15.getLang()==='fr' ? 'Copier' : 'Kopieren'), 900);
+  };
+
+  document.getElementById('btnBack').onclick=()=>CC15.goto('checkout.html');
+
+  document.getElementById('btnPaid').onclick=async ()=>{
+    order.status='paid_reported';
+    order.paid_at = new Date().toISOString();
+    localStorage.setItem(CC15.STORAGE_KEYS.order, JSON.stringify(order));
+
+    // Optional: order in Supabase speichern (falls Policies passen). Fehler ignorieren.
+    try{
+      const sb = CC15.getSupabase();
+      await sb.from('cc15_orders').insert({
+        status: order.status,
+        location: order.location,
+        pickup_time: order.pickup_time,
+        total_chf: order.total,
+        created_at: new Date().toISOString()
+      });
+    }catch(e){ console.warn('order insert failed (ok for now)', e); }
+
+    CC15.goto('done.html');
+  };
+}
+
+window.renderPage = render;
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>CombatCart 15 – Warenkorb</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand" style="cursor:pointer" onclick="CC15.goto('index.html')">
+        <img src="assets/logo.png" alt="CombatCart 15"/>
+        <div class="title">
+          <div class="h1">COMBATCART 15</div>
+          <div class="h2">Tactical Mobile Supply</div>
+        </div>
+      </div>
+      <div class="pill lang">
+        <button data-lang="de" class="active">DE</button>
+        <button data-lang="fr">FR</button>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="card">
+        <h1 data-i18n="cart">Warenkorb</h1>
+        <div class="muted" id="emptyMsg" style="display:none;" data-i18n="emptyCart">Dein Warenkorb ist leer.</div>
+
+        <div class="list" id="list"></div>
+
+        <div class="row" style="justify-content:space-between; align-items:center; margin-top:12px;">
+          <div style="font-weight:950; letter-spacing:.04em;"><span data-i18n="total">Total</span>: <span id="total">0.00</span> CHF</div>
+          <div class="row">
+            <button class="btn" id="btnBack" data-i18n="continue">Weiter einkaufen</button>
+            <button class="btn primary" id="btnCheckout" data-i18n="toCheckout">Zur Kasse</button>
+          </div>
+        </div>
+
+        <div class="muted" style="margin-top:10px;" data-i18n="noteData"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="app.js"></script>
+<script>
+function render(){
+  CC15.initCommon();
+  const cart = CC15.getCart();
+  const list = document.getElementById('list');
+  const empty = document.getElementById('emptyMsg');
+  list.innerHTML = '';
+  empty.style.display = cart.length ? 'none' : 'block';
+
+  cart.forEach(item=>{
+    const row = document.createElement('div');
+    row.className='item';
+
+    const img=document.createElement('img');
+    img.src=item.img; img.alt='';
+    row.appendChild(img);
+
+    const meta=document.createElement('div');
+    meta.className='grow';
+    const name=document.createElement('div');
+    name.style.fontWeight='950';
+    name.textContent = (CC15.getLang()==='fr'? item.name_fr : item.name_de);
+    const price=document.createElement('div');
+    price.className='muted';
+    price.textContent = CC15.money(item.price)+' CHF';
+    meta.appendChild(name); meta.appendChild(price);
+    row.appendChild(meta);
+
+    const qty=document.createElement('div');
+    qty.className='qty';
+    const minus=document.createElement('button'); minus.textContent='–';
+    const val=document.createElement('span'); val.textContent=String(item.qty);
+    const plus=document.createElement('button'); plus.textContent='+';
+    qty.appendChild(minus); qty.appendChild(val); qty.appendChild(plus);
+    row.appendChild(qty);
+
+    const del=document.createElement('button');
+    del.className='btn danger';
+    del.textContent = (CC15.getLang()==='fr' ? 'Suppr.' : 'Löschen');
+    row.appendChild(del);
+
+    minus.onclick=()=>{ item.qty=Math.max(1, item.qty-1); CC15.setCart(cart); render(); };
+    plus.onclick=()=>{ item.qty=item.qty+1; CC15.setCart(cart); render(); };
+    del.onclick=()=>{ const i=cart.findIndex(x=>x.id===item.id); if(i>=0){ cart.splice(i,1); CC15.setCart(cart);} render(); };
+
+    list.appendChild(row);
+  });
+
+  document.getElementById('total').textContent = CC15.money(CC15.cartTotal());
+  CC15.syncHeader();
+
+  document.getElementById('btnBack').onclick=()=>CC15.goto('index.html');
+  document.getElementById('btnCheckout').onclick=()=>{
+    if(!CC15.getCart().length) return;
+    CC15.goto('checkout.html');
+  };
+}
+
+window.renderPage = render;
+render();
+</script>
+</body>
+</html>

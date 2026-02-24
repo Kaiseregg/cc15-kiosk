@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#2b2f36"/><stop offset="1" stop-color="#56616f"/>
+</linearGradient></defs>
+<rect width="100%" height="100%" fill="url(#g)"/>
+<rect x="40" y="40" width="720" height="520" rx="28" fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.18)" stroke-width="6"/>
+<text x="50%" y="48%" dominant-baseline="middle" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="84" fill="rgba(255,255,255,0.88)">Water</text>
+<text x="50%" y="62%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="rgba(255,255,255,0.6)">Demo image</text>
+</svg>

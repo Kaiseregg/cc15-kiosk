@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>CombatCart 15 – Checkout</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand" style="cursor:pointer" onclick="CC15.goto('index.html')">
+        <img src="assets/logo.png" alt="CombatCart 15"/>
+        <div class="title">
+          <div class="h1">COMBATCART 15</div>
+          <div class="h2">Tactical Mobile Supply</div>
+        </div>
+      </div>
+      <div class="pill lang">
+        <button data-lang="de" class="active">DE</button>
+        <button data-lang="fr">FR</button>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="card">
+        <h1 data-i18n="checkout">Kasse</h1>
+
+        <div class="field">
+          <label data-i18n="name">Name</label>
+          <input id="name" autocomplete="family-name" />
+        </div>
+
+        <div class="field">
+          <label data-i18n="firstname">Vorname</label>
+          <input id="firstname" autocomplete="given-name" />
+        </div>
+
+        <div class="field">
+          <label data-i18n="phone">Handy</label>
+          <input id="phone" inputmode="tel" autocomplete="tel" />
+        </div>
+
+        <div class="row">
+          <div class="field" style="flex:1; min-width: 220px;">
+            <label data-i18n="location">Ort</label>
+            <select id="location">
+              <option value="corb" data-i18n="corb">Corbières</option>
+              <option value="azh" data-i18n="azh">AZH Romont</option>
+            </select>
+          </div>
+
+          <div class="field" style="flex:1; min-width: 220px;">
+            <label data-i18n="time">Zeitfenster</label>
+            <select id="time">
+              <option value="09:00" data-i18n="time1">09:00</option>
+              <option value="11:00" data-i18n="time2">11:00</option>
+              <option value="13:30" data-i18n="time3">13:30</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="justify-content:space-between; align-items:center; margin-top:12px;">
+          <div style="font-weight:950; letter-spacing:.04em;"><span data-i18n="total">Total</span>: <span id="total">0.00</span> CHF</div>
+          <div class="row">
+            <button class="btn" id="btnCart" data-i18n="cart">Warenkorb</button>
+            <button class="btn primary" id="btnCreate" data-i18n="createOrder">Bestellung erstellen</button>
+          </div>
+        </div>
+
+        <div class="muted" id="err" style="margin-top:10px; color: rgba(255,120,120,.95); display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="app.js"></script>
+<script>
+function render(){
+  CC15.initCommon();
+  if(!CC15.getCart().length){ CC15.goto('cart.html'); return; }
+  document.getElementById('total').textContent = CC15.money(CC15.cartTotal());
+  CC15.syncHeader();
+
+  document.getElementById('btnCart').onclick=()=>CC15.goto('cart.html');
+  document.getElementById('btnCreate').onclick=()=>{
+    const name = document.getElementById('name').value.trim();
+    const firstname = document.getElementById('firstname').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const location = document.getElementById('location').value;
+    const time = document.getElementById('time').value;
+
+    const err = document.getElementById('err');
+    err.style.display='none';
+
+    if(!name || !firstname || !phone){
+      err.textContent = (CC15.getLang()==='fr'
+        ? 'Veuillez remplir Nom, Prénom et Mobile.'
+        : 'Bitte Name, Vorname und Handy ausfüllen.');
+      err.style.display='block';
+      return;
+    }
+
+    const order = {
+      id: 'CC15-' + Math.random().toString(16).slice(2,8).toUpperCase(),
+      name, firstname, phone, location, time,
+      total: CC15.cartTotal(),
+      items: CC15.getCart(),
+      created_at: new Date().toISOString(),
+      status: 'created'
+    };
+    localStorage.setItem(CC15.STORAGE_KEYS.order, JSON.stringify(order));
+    CC15.goto('pay.html');
+  };
+}
+
+window.renderPage = render;
+render();
+</script>
+</body>
+</html>

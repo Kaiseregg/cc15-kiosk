@@ -1,0 +1,1 @@
+CombatCart 15 – Kiosk Mode v2 (FRESH)\n\nStart: open index.html or VS Code Live Server.\nPages: index/cart/checkout/pay/done\nDemo products in slots 1-6.\n
