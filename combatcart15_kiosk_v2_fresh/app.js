@@ -62,4 +62,17 @@ function initCommon(){
   syncHeader();
 }
 
-window.CC15 = { t, getLang, setLang, getCart, setCart, cartCount, cartTotal, money, syncHeader, goto, initCommon, STORAGE_KEYS };
+// Supabase helper (created on-demand). Avoid persistent sessions for kiosk usage.
+let __cc15_sb = null;
+function getSupabase(){
+  if(__cc15_sb) return __cc15_sb;
+  const cfg = window.CC15_CONFIG && window.CC15_CONFIG.supabase;
+  if(!cfg || !cfg.url || !cfg.anon) throw new Error('Missing Supabase config (url/anon) in config.js');
+  if(!window.supabase || !window.supabase.createClient) throw new Error('Supabase JS not loaded');
+  __cc15_sb = window.supabase.createClient(cfg.url, cfg.anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return __cc15_sb;
+}
+
+window.CC15 = { t, getLang, setLang, getCart, setCart, cartCount, cartTotal, money, syncHeader, goto, initCommon, STORAGE_KEYS, getSupabase };
