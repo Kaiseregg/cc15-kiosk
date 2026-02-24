@@ -1,45 +1,77 @@
-
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="de">
 <head>
-<meta charset="UTF-8">
-<title>Done</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>CombatCart 15 – Bestätigung</title>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-<h2>Bestellung wird gespeichert...</h2>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand" style="cursor:pointer" onclick="CC15.goto('index.html')">
+        <img src="assets/logo.png" alt="CombatCart 15"/>
+        <div class="title">
+          <div class="h1">COMBATCART 15</div>
+          <div class="h2">Tactical Mobile Supply</div>
+        </div>
+      </div>
+      <div class="pill lang">
+        <button data-lang="de" class="active">DE</button>
+        <button data-lang="fr">FR</button>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="card">
+        <h1 data-i18n="confirm">Bestätigung</h1>
+
+        <div style="font-weight:950; letter-spacing:.04em; margin-bottom:8px;">
+          <span data-i18n="orderNo">Bestellnummer</span>: <span id="orderId">—</span>
+        </div>
+
+        <div class="muted" id="summary"></div>
+
+        <div class="row" style="margin-top:12px;">
+          <button class="btn" id="btnNew" data-i18n="newOrder">Neue Bestellung</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="app.js"></script>
 <script>
-const url = localStorage.getItem("sb_url");
-const key = localStorage.getItem("sb_key");
-const sb = supabase.createClient(url,key);
+function getOrder(){
+  try{ return JSON.parse(localStorage.getItem(CC15.STORAGE_KEYS.order)||'null'); }catch{return null}
+}
+function render(){
+  CC15.initCommon();
+  const order=getOrder();
+  if(!order){ CC15.goto('index.html'); return; }
 
-(async()=>{
-  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
-  const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  document.getElementById('orderId').textContent = order.id;
 
-  const {data:order,error} = await sb.from("cc15_orders").insert([{
-    status:"paid_reported",
-    payment_method:"twint",
-    location:"azh",
-    total_chf:total
-  }]).select().single();
+  const loc = (order.location==='corb') ? (CC15.getLang()==='fr' ? 'Corbières' : 'Corbières') : (CC15.getLang()==='fr' ? 'AZH Romont' : 'AZH Romont');
+  const lines = [
+    (CC15.getLang()==='fr' ? `Client: ${order.firstname} ${order.name}` : `Kunde: ${order.firstname} ${order.name}`),
+    (CC15.getLang()==='fr' ? `Mobile: ${order.phone}` : `Handy: ${order.phone}`),
+    (CC15.getLang()==='fr' ? `Lieu: ${loc}` : `Ort: ${loc}`),
+    (CC15.getLang()==='fr' ? `Créneau: ${order.time}` : `Zeitfenster: ${order.time}`),
+    (CC15.getLang()==='fr' ? `Total: ${CC15.money(order.total)} CHF` : `Total: ${CC15.money(order.total)} CHF`)
+  ];
+  document.getElementById('summary').innerHTML = lines.map(x=>`• ${x}`).join('<br/>');
 
-  if(error){alert(error.message);return}
+  document.getElementById('btnNew').onclick=()=>{
+    // reset cart for a new order
+    CC15.setCart([]);
+    localStorage.removeItem(CC15.STORAGE_KEYS.order);
+    CC15.goto('index.html');
+  };
 
-  const items = cart.map(i=>({
-    order_id:order.id,
-    product_name:i.name,
-    product_id:i.id,
-    unit_price_chf:i.price,
-    qty:i.qty,
-    line_total_chf:i.price*i.qty
-  }));
-
-  await sb.from("cc15_order_items").insert(items);
-
-  localStorage.removeItem("cart");
-  document.body.innerHTML="<h2>Bestellung gespeichert ✔</h2>";
-})();
+  CC15.syncHeader();
+}
+window.renderPage = render;
+render();
 </script>
 </body>
 </html>
