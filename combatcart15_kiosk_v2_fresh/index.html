@@ -112,14 +112,22 @@ async function loadSlotsView(){
       .order('slot_no', { ascending: true });
     if(error) throw error;
     SLOTS_VIEW = Array.isArray(data) ? data : [];
-    // If view doesn't provide image_url, build it from Supabase Storage bucket `product-images`
+    // Build image_url from Supabase Storage bucket `product-images`.
+    // Some views expose image_url already, but it may only be a filename like "cola.png".
+    // In that case we still need to turn it into a public URL.
     if (sb && sb.storage && SLOTS_VIEW.length){
+      const isHttp = (v)=> typeof v === 'string' && /^https?:\/\//i.test(v);
       SLOTS_VIEW = SLOTS_VIEW.map(r => {
-        if(!r.image_url && r.image_path){
+        const path = (r.image_path || r.image_url || '').toString().trim();
+        if(path && !isHttp(path)){
           try{
-            const { data } = sb.storage.from('product-images').getPublicUrl(r.image_path);
+            const { data } = sb.storage.from('product-images').getPublicUrl(path);
             r.image_url = data && data.publicUrl ? data.publicUrl : null;
           }catch(e){ r.image_url = null; }
+        }else if(isHttp(path)){
+          r.image_url = path;
+        }else{
+          r.image_url = null;
         }
         return r;
       });
