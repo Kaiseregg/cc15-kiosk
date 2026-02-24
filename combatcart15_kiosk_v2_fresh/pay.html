@@ -86,16 +86,41 @@ function render(){
     order.paid_at = new Date().toISOString();
     localStorage.setItem(CC15.STORAGE_KEYS.order, JSON.stringify(order));
 
-    // Optional: order in Supabase speichern (falls Policies passen). Fehler ignorieren.
+    // Order + Items in Supabase speichern (Fehler ignorieren, UI geht trotzdem weiter)
     try{
       const sb = CC15.getSupabase();
-      await sb.from('cc15_orders').insert({
-        status: order.status,
-        location: order.location,
-        pickup_time: order.pickup_time,
-        total_chf: order.total,
-        created_at: new Date().toISOString()
-      });
+
+      // 1) Order
+      const r1 = await sb.from('cc15_orders')
+        .insert({
+          status: order.status,
+          payment_method: 'twint',
+          location: order.location,
+          pickup_time: order.pickup_time,
+          customer_first_name: order.firstname,
+          customer_last_name: order.name,
+          customer_phone: order.phone,
+          total_chf: order.total,
+          created_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+      if(r1.error) throw r1.error;
+
+      // 2) Order items
+      const items = Array.isArray(order.items) ? order.items : [];
+      if(items.length){
+        const rows = items.map(it=>({
+          order_id: r1.data.id,
+          product_id: it.id,
+          product_name: it.name || it.name_de || it.name_fr || 'Item',
+          unit_price_chf: it.price,
+          qty: it.qty,
+          line_total_chf: (Number(it.price)||0) * (Number(it.qty)||1)
+        }));
+        const r2 = await sb.from('cc15_order_items').insert(rows);
+        if(r2.error) console.warn('order_items insert failed:', r2.error);
+      }
     }catch(e){ console.warn('order insert failed (ok for now)', e); }
 
     CC15.goto('done.html');
