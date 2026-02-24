@@ -112,6 +112,18 @@ async function loadSlotsView(){
       .order('slot_no', { ascending: true });
     if(error) throw error;
     SLOTS_VIEW = Array.isArray(data) ? data : [];
+    // If view doesn't provide image_url, build it from Supabase Storage bucket `product-images`
+    if (sb && sb.storage && SLOTS_VIEW.length){
+      SLOTS_VIEW = SLOTS_VIEW.map(r => {
+        if(!r.image_url && r.image_path){
+          try{
+            const { data } = sb.storage.from('product-images').getPublicUrl(r.image_path);
+            r.image_url = data && data.publicUrl ? data.publicUrl : null;
+          }catch(e){ r.image_url = null; }
+        }
+        return r;
+      });
+    }
   }catch(e){
     console.warn('Supabase load failed, fallback to EMPTY', e);
     SLOTS_VIEW = [];
