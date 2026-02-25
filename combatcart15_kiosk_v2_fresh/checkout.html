@@ -102,7 +102,11 @@ function render(){
 
     const order = {
       id: 'CC15-' + Math.random().toString(16).slice(2,8).toUpperCase(),
-      name, firstname, phone, location, time,
+      name, firstname, phone, location,
+      // legacy field used in UI
+      time,
+      // DB/Admin expect this field
+      pickup_time: time,
       total: CC15.cartTotal(),
       items: CC15.getCart(),
       created_at: new Date().toISOString(),

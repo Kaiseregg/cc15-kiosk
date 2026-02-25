@@ -56,7 +56,7 @@ function render(){
     (CC15.getLang()==='fr' ? `Client: ${order.firstname} ${order.name}` : `Kunde: ${order.firstname} ${order.name}`),
     (CC15.getLang()==='fr' ? `Mobile: ${order.phone}` : `Handy: ${order.phone}`),
     (CC15.getLang()==='fr' ? `Lieu: ${loc}` : `Ort: ${loc}`),
-    (CC15.getLang()==='fr' ? `Créneau: ${order.time}` : `Zeitfenster: ${order.time}`),
+    (CC15.getLang()==='fr' ? `Créneau: ${order.pickup_time || order.time}` : `Zeitfenster: ${order.pickup_time || order.time}`),
     (CC15.getLang()==='fr' ? `Total: ${CC15.money(order.total)} CHF` : `Total: ${CC15.money(order.total)} CHF`)
   ];
   document.getElementById('summary').innerHTML = lines.map(x=>`• ${x}`).join('<br/>');
